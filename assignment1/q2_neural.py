@@ -43,12 +43,14 @@ def forward_backward_prop(data, labels, params, dimensions):
     ### END YOUR CODE
 
     ### YOUR CODE HERE: backward propagation
-    gradb2 = delta1 = y - labels
+    delta1 = y - labels
+    gradb2 = np.sum(delta1, 0)
     gradW2 = np.matmul(np.transpose(h), delta1)
 
     delta2 = np.matmul(delta1, np.transpose(W2))
     sgrad = sigmoid_grad(h)
-    gradb1 = delta3 = delta2 * sgrad
+    delta3 = delta2 * sgrad
+    gradb1 = np.sum(delta3, 0)
     gradW1 = np.matmul(np.transpose(data), delta3)
 
      ### END YOUR CODE

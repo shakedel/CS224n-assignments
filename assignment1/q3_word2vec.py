@@ -59,22 +59,27 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     """
 
     ### YOUR CODE HERE
-    U = outputVectors
+    U = outputVectors.T
     v_c = predicted
     o = target
-    u_o = U[o]
-    y_hat = np.exp(np.dot(U, v_c)) / np.sum(np.exp(np.dot(U, v_c)))
-    y_o = y_hat[o]
-    cost = -1 * np.log(y_o)
+
+    Theta = (U.T).dot(v_c)
+    y_hat = softmax(Theta)
+
     y = np.zeros(y_hat.shape)
     y[o] = 1
-    y_hat_minus_y = y_hat - y
-    gradV = np.sum(U * y_hat_minus_y.reshape((-1, 1)), axis=0)
-    gradU = v_c * y_hat_minus_y.reshape((-1, 1))
+    delta = y_hat - y
+    dJ_dvc = U.dot(delta)
+    dJ_dU = np.outer(v_c, delta)
 
-    gradPred = gradV
-    grad = gradU
+    y_hat_o = y_hat[o]
+    J = -1 * np.log(y_hat_o)
+
+    gradPred = dJ_dvc
+    grad = dJ_dU.T
+    cost = J
     ### END YOUR CODE
+    
     return cost, gradPred, grad
 
 
@@ -110,23 +115,36 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     indices.extend(getNegativeSamples(target, dataset, K))
 
     ### YOUR CODE HERE
-
-    U = outputVectors
+    U = outputVectors.T
     v_c = predicted
     o = target
-    u_o = U[o, :]
-    neg_samples = U[indices, :]
+    u_o = U[:, o]
 
-    z1 = np.dot(u_o, v_c)
-    s1 = sigmoid(z1) - 1
-    z2 = -1 * np.dot(neg_samples, v_c)
-    s2 = sigmoid(z2) - 1
-    cost = -1 * np.log(sigmoid(z1)) - np.sum(np.log(sigmoid(-1 * s2)), axis=0)
-    gradV = np.dot(s1, u_o)-np.sum(neg_samples * s2[:, np.newaxis], axis=0)
-    gradU = np.dot(s1, v_c)
+    J = 0.0
+    dJ_dvc = np.zeros(v_c.shape)
+    dJ_dU = np.zeros(U.shape)
 
-    gradPred = gradV
-    grad = gradU
+    indices.pop(0)
+
+    S_o = u_o.dot(v_c)
+    sig_S_o = sigmoid(S_o)
+
+    J -= np.log(sig_S_o)
+    dJ_dU[:, o] += (sig_S_o - 1) * v_c
+    dJ_dvc += (sig_S_o - 1) * u_o
+    for k in indices:
+        u_k = U[:, k]
+        S_k = u_k.dot(v_c)
+        sig_minus_S_k = sigmoid(-1 * S_k)
+
+        J -= np.log(sig_minus_S_k)
+        dJ_dvc -= (sig_minus_S_k - 1) * u_k
+        dJ_dU[:, k] -= (sig_minus_S_k - 1) * v_c
+
+    cost = J
+    gradPred = dJ_dvc
+    grad = dJ_dU.T
+
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -161,19 +179,32 @@ def skipgram(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     gradOut = np.zeros(outputVectors.shape)
 
     ### YOUR CODE HERE
-    currentVectorIndex = tokens[currentWord]
-    contextVectorIndices = [tokens[ctxWord] for ctxWord in contextWords]
-    for ctxVecIdx in contextVectorIndices:
-        c, gIn, gOut = word2vecCostAndGradient(outputVectors[ctxVecIdx],
-            currentVectorIndex, outputVectors, dataset)
-        cost += c
-        gradIn[currentVectorIndex] = gradIn[currentVectorIndex] + gIn
-        gradOut += gOut
 
-    # m = np.apply_along_axis(
-    #     word2vecCostAndGradient, -1, contextVectors, currentVector,
-    #     outputVectors, dataset)
-    # cost, gradIn, gradOut = np.sum(m, axis=1)
+    V = inputVectors.T
+    U = outputVectors.T
+    J = cost
+
+    dJ_dU = gradOut.T
+    dJ_dV = gradIn.T
+
+    c = tokens[currentWord]
+    ws = [tokens[word] for word in contextWords]
+
+    v_c = V[:, c]
+    # context vectors
+    W = U[:, ws]
+
+    for w_j in W.T:
+        J_w, grad_vc, grad_U_T = word2vecCostAndGradient(v_c, c, U.T, dataset)
+        grad_U = grad_U_T.T
+
+        J += J_w
+        dJ_dU += grad_U
+        dJ_dV[:, c] += grad_vc
+
+    cost = J
+    gradIn = dJ_dV.T
+    gradOut = dJ_dU.T
     ### END YOUR CODE
 
     return cost, gradIn, gradOut

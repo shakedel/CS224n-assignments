@@ -30,15 +30,20 @@ def gradcheck_naive(f, x):
         # to test cost functions with built in randomness later.
 
         ### YOUR CODE HERE:
-        random.setstate(rndstate)
-
-        if isinstance(fx, np.ndarray):
-            h_vec = np.eye(1, x.size(), ix)
+        if not len(ix):
+            # scalar
+            h_vec = h
         else:
-            h_vec = np.array([fx])
+            h_vec = np.zeros(x.shape)
+            h_vec[ix] += h
 
-        hval, _ = f(x + h_vec)
-        numgrad = (hval - fx) / h
+        random.setstate(rndstate)
+        fxplus, _ = f(x + h_vec)
+
+        random.setstate(rndstate)
+        fxminus, _ = f(x - h_vec)
+
+        numgrad = (fxplus - fxminus) / (2 * h)
 
         ### END YOUR CODE
 
@@ -49,7 +54,7 @@ def gradcheck_naive(f, x):
             print "First gradient error found at index %s" % str(ix)
             print "Your gradient: %f \t Numerical gradient: %f" % (
                 grad[ix], numgrad)
-            return
+            # return
 
         it.iternext() # Step to next dimension
 
