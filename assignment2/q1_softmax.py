@@ -25,11 +25,18 @@ def softmax(x):
 
     ### YOUR CODE HERE
 
-    max = tf.reduce_max(x, axis=1)
-    shifted = x - max
-    exp = tf.exp(max)
-    sums = tf.reduce_sum(exp, axis=1)
-    out = exp / sums
+    max = tf.reduce_max(x, axis=1, name='max', keepdims=True)
+    shifted = tf.subtract(x, max, name='shifted')
+    exp = tf.exp(shifted, name='exp')
+    sums = tf.reduce_sum(exp, axis=1, name='sums', keepdims=True)
+    out = tf.divide(exp, sums, name='out')
+
+    # out = tf.Print(out, [x], summarize=100, message='x = ')
+    # out = tf.Print(out, [max], summarize=100, message='max = ')
+    # out = tf.Print(out, [shifted], summarize=100, message='shifted = ')
+    # out = tf.Print(out, [exp], summarize=100, message='exp = ')
+    # out = tf.Print(out, [sums], summarize=100, message='sums = ')
+    # out = tf.Print(out, [out], summarize=100, message='out = ')
 
     ### END YOUR CODE
 
@@ -61,6 +68,20 @@ def cross_entropy_loss(y, yhat):
     """
 
     ### YOUR CODE HERE
+    log = tf.log(yhat, name='log')
+    cast = tf.cast(y, tf.float32, name='cast')
+    mult = tf.multiply(cast, log, name='mult')
+    sum = tf.reduce_sum(mult, name='sum')
+    out = -1 * sum
+
+    # out = tf.Print(out, [y], summarize=100, message='y = ')
+    # out = tf.Print(out, [yhat], summarize=100, message='yhat = ')
+    # out = tf.Print(out, [log], summarize=100, message='log = ')
+    # out = tf.Print(out, [cast], summarize=100, message='cast = ')
+    # out = tf.Print(out, [mult], summarize=100, message='mult = ')
+    # out = tf.Print(out, [sum], summarize=100, message='sum = ')
+    # out = tf.Print(out, [out], summarize=100, message='out = ')
+
     ### END YOUR CODE
 
     return out

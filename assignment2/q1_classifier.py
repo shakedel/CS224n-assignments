@@ -46,6 +46,14 @@ class SoftmaxModel(Model):
             self.labels_placeholder
         """
         ### YOUR CODE HERE
+
+        input_shape = (self.config.batch_size, self.config.n_features)
+        self.input_placeholder = tf.placeholder(tf.float32, shape=input_shape,
+                                                name='softmax_input')
+        labels_shape = (self.config.batch_size , self.config.n_classes)
+        self.labels_placeholder = tf.placeholder(tf.int32, shape=labels_shape,
+                                                 name='softmax_labels')
+
         ### END YOUR CODE
 
     def create_feed_dict(self, inputs_batch, labels_batch=None):
@@ -69,6 +77,13 @@ class SoftmaxModel(Model):
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
         ### YOUR CODE HERE
+        feed_dict = {
+            self.input_placeholder: inputs_batch,
+        }
+        labels_batch is not None and (feed_dict.setdefault(
+            self.labels_placeholder,
+                                               labels_batch))
+
         ### END YOUR CODE
         return feed_dict
 
@@ -90,6 +105,14 @@ class SoftmaxModel(Model):
             pred: A tensor of shape (batch_size, n_classes)
         """
         ### YOUR CODE HERE
+        W_shape = (self.config.n_features, self.config.n_classes)
+        W = tf.Variable(initial_value=tf.zeros(W_shape), name='W')
+        b_shape = (self.config.n_classes,)
+        b = tf.Variable(initial_value=tf.zeros(b_shape), name='b')
+        mult = tf.matmul(self.input_placeholder, W, name='mult')
+        add = tf.add(mult, b, name='add')
+        pred = softmax(add)
+
         ### END YOUR CODE
         return pred
 
@@ -104,6 +127,7 @@ class SoftmaxModel(Model):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE
+        loss = cross_entropy_loss(self.labels_placeholder, pred)
         ### END YOUR CODE
         return loss
 
@@ -127,6 +151,9 @@ class SoftmaxModel(Model):
             train_op: The Op for training.
         """
         ### YOUR CODE HERE
+        optimizer = tf.train.GradientDescentOptimizer(
+            learning_rate=self.config.lr)
+        train_op = optimizer.minimize(loss)
         ### END YOUR CODE
         return train_op
 
