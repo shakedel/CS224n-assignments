@@ -21,6 +21,11 @@ class PartialParse(object):
         self.sentence = sentence
 
         ### YOUR CODE HERE
+
+        self.stack = ["ROOT"]
+        self.buffer = list(sentence)
+        self.dependencies = []
+
         ### END YOUR CODE
 
     def parse_step(self, transition):
@@ -32,6 +37,19 @@ class PartialParse(object):
                         transition.
         """
         ### YOUR CODE HERE
+
+        if transition == "S":
+            self.stack.append(self.buffer.pop(0))
+        elif transition == "RA":
+            self.dependencies.append((self.stack[-2], self.stack[-1]))
+            self.stack.pop(-1)
+        elif transition == "LA":
+            self.dependencies.append((self.stack[-1], self.stack[-2]))
+            self.stack.pop(-2)
+        else:
+            raise ValueError('Illegal transition')
+
+
         ### END YOUR CODE
 
     def parse(self, transitions):
@@ -66,6 +84,38 @@ def minibatch_parse(sentences, model, batch_size):
     """
 
     ### YOUR CODE HERE
+
+    def done_parsing(partial_parse):
+        return len(partial_parse.stack)==1 and not partial_parse.buffer
+
+    # build object list from sentences
+    partial_parses = [PartialParse(sentence) for sentence in sentences]
+    # create shallow copy
+    unfinished_parses = list(partial_parses)
+    while unfinished_parses:
+
+        # slice minibatch
+        minibatch = unfinished_parses[:batch_size]
+
+        # predict transitions
+        transitions = model.predict(minibatch)
+
+        # apply step
+        for unfinished_parse, step in zip(minibatch, transitions):
+            unfinished_parse.parse_step(step)
+
+        # find finished
+        finished_indices = [idx for idx, partial_parse in enumerate(
+            minibatch) if done_parsing(partial_parse)]
+
+        #remove finished in reverse order to avoid index corruption
+        finished_indices.reverse()
+        for idx in finished_indices:
+            unfinished_parses.pop(idx)
+
+
+    dependencies = [partial_parse.dependencies for partial_parse in partial_parses]
+
     ### END YOUR CODE
 
     return dependencies

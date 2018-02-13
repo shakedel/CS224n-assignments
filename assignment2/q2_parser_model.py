@@ -1,4 +1,4 @@
-import cPickle
+import pickle
 import os
 import time
 import tensorflow as tf
@@ -54,6 +54,16 @@ class ParserModel(Model):
         (Don't change the variable names)
         """
         ### YOUR CODE HERE
+
+        input_shape = (None, self.config.n_features)
+        self.input_placeholder = tf.placeholder(shape=input_shape, dtype=tf.int32)
+
+        labels_shape = (None, self.config.n_classes)
+        self.labels_placeholder = tf.placeholder(shape=labels_shape,
+                                              dtype=tf.float32)
+
+        self.dropout_placeholder = tf.placeholder(shape=(), dtype=tf.float32)
+
         ### END YOUR CODE
 
     def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=0):
@@ -79,6 +89,18 @@ class ParserModel(Model):
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
         ### YOUR CODE HERE
+        feed_dict = {}
+
+        def add_if_not_none(key, val):
+            if val != None:
+                feed_dict[key] = val
+            pass
+
+        feed_dict[self.input_placeholder] = inputs_batch
+        if labels_batch is not None:
+            feed_dict[self.labels_placeholder] = labels_batch
+        feed_dict[self.dropout_placeholder] = dropout
+
         ### END YOUR CODE
         return feed_dict
 
@@ -87,7 +109,7 @@ class ParserModel(Model):
         concatenates those vectors:
             - Creates a tf.Variable and initializes it with self.pretrained_embeddings.
             - Uses the input_placeholder to index into the embeddings tensor, resulting in a
-              tensor of shape (None, n_features, embedding_size).
+              tensor of shape (None, n_features, embedding_size ).
             - Concatenates the embeddings by reshaping the embeddings tensor to shape
               (None, n_features * embedding_size).
 
@@ -100,6 +122,16 @@ class ParserModel(Model):
             embeddings: tf.Tensor of shape (None, n_features*embed_size)
         """
         ### YOUR CODE HERE
+
+        current_embeddings = tf.Variable(
+            initial_value=self.pretrained_embeddings)
+        embedded = tf.nn.embedding_lookup(params=current_embeddings,
+                                   ids=self.input_placeholder)
+
+        embeddings_shape = [-1,
+                            self.config.n_features * self.config.embed_size]
+        embeddings = tf.reshape(embedded, shape=embeddings_shape)
+
         ### END YOUR CODE
         return embeddings
 
@@ -126,6 +158,28 @@ class ParserModel(Model):
 
         x = self.add_embedding()
         ### YOUR CODE HERE
+
+        matrix_init = xavier_weight_init()
+        total_features = self.config.n_features * self.config.embed_size
+
+        W_shape = (total_features, self.config.hidden_size)
+        W = tf.Variable(dtype=tf.float32, initial_value=matrix_init(W_shape))
+
+        b1_shape = (self.config.hidden_size,)
+        b1 = tf.Variable(dtype=tf.float32, initial_value=tf.zeros(b1_shape))
+
+        h = tf.nn.relu(tf.matmul(x, W) + b1)
+
+        h_drop = tf.nn.dropout(h, keep_prob=1-self.config.dropout)
+
+        U_shape = (self.config.hidden_size, self.config.n_classes)
+        U = tf.Variable(dtype=tf.float32, initial_value=matrix_init(U_shape))
+
+        b2_shape = (self.config.n_classes,)
+        b2 = tf.Variable(dtype=tf.float32, initial_value=tf.zeros(b2_shape))
+
+        pred = tf.matmul(h_drop, U) + b2
+
         ### END YOUR CODE
         return pred
 
@@ -143,6 +197,12 @@ class ParserModel(Model):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE
+
+        cross_entropies = tf.nn.softmax_cross_entropy_with_logits(
+            labels=self.labels_placeholder, logits=pred)
+
+        loss = tf.reduce_mean(cross_entropies)
+
         ### END YOUR CODE
         return loss
 
@@ -167,6 +227,10 @@ class ParserModel(Model):
             train_op: The Op for training.
         """
         ### YOUR CODE HERE
+
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.config.lr)
+        train_op = optimizer.minimize(loss)
+
         ### END YOUR CODE
         return train_op
 
@@ -183,9 +247,9 @@ class ParserModel(Model):
             loss = self.train_on_batch(sess, train_x, train_y)
             prog.update(i + 1, [("train loss", loss)], force=i + 1 == n_minibatches)
 
-        print ("Evaluating on dev set",)
+        print("Evaluating on dev set",)
         dev_UAS, _ = parser.parse(dev_set)
-        print( "- dev UAS: {:.2f}".format(dev_UAS * 100.0))
+        print("- dev UAS: {:.2f}".format(dev_UAS * 100.0))
         return dev_UAS
 
     def fit(self, sess, saver, parser, train_examples, dev_set):
@@ -246,11 +310,11 @@ def main(debug=True):
             UAS, dependencies = parser.parse(test_set)
             print("- test UAS: {:.2f}".format(UAS * 100.0))
             print("Writing predictions")
-            with open('q2_test.predicted.pkl', 'w') as f:
-                cPickle.dump(dependencies, f, -1)
+            with open('q2_test.predicted.pkl', 'wb') as f:
+                pickle.dump(dependencies, f, -1)
             print("Done!")
 
 
 if __name__ == '__main__':
-    main()
+    main(debug=False)
 

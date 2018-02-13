@@ -81,8 +81,7 @@ class SoftmaxModel(Model):
             self.input_placeholder: inputs_batch,
         }
         labels_batch is not None and (feed_dict.setdefault(
-            self.labels_placeholder,
-                                               labels_batch))
+            self.labels_placeholder, labels_batch))
 
         ### END YOUR CODE
         return feed_dict
