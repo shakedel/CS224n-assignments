@@ -1,4 +1,2 @@
 tensorflow
 numpy
-pytest
-_pickle
