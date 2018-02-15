@@ -1,0 +1,8 @@
+*.pyc
+
+# outputs
+saved_params*
+q4_reg_v_acc.png
+q4_dev_pred.txt
+q4_dev_conf.png
+
